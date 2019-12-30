@@ -1,0 +1,124 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 11/8/2019 8:12:10 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      :  422 HW4 #3
+00000000                             3  * Written by :  Kyle Dukart
+00000000                             4  * Date       :  11/8/19
+00000000                             5  * Description:  This program takes user input for Starting Address,
+00000000                             6  *   Ending Address, and Pattern to search as word-length values.  The pattern
+00000000                             7  *   input is a string of up to 16 chars containing only '0' and '1'. The
+00000000                             8  *   program iterates through the given address values word by word, checking
+00000000                             9  *   to see if the pattern is located in memory.  If the pattern is found, the
+00000000                            10  *   address of the pattern will be stored in A5.  If the pattern is not found,
+00000000                            11  *   $FFFFFFFF will be stored in A5.
+00000000                            12  *-----------------------------------------------------------
+00000000  =0000000D                 13  CR  EQU $0D         ; carraige return
+00000000  =0000000A                 14  LF  EQU $0A         ; line feed
+00000000  =00000002                 15  word    EQU 2       ; advance by 1 word
+00000000  =00002700                 16  exit    EQU $2700   ; simulator stop code
+00000000  =000000FF                 17  mask    EQU $00FF   ; masking 2 lower bytes
+00000000                            18  
+00001000                            19      ORG    $1000
+00001000                            20  START:                  ; first instruction of program
+00001000                            21  
+00001000                            22  * Put program code here
+00001000                            23  
+00001000  103C 000E                 24      MOVE.B  #14,D0      ; set up TRAP
+00001004  43F9 00001078             25      LEA INTROMSG,A1     ; prepare intromsg
+0000100A  4E4F                      26      TRAP #15            ; display intromsg
+0000100C                            27      
+0000100C  103C 0004                 28      MOVE.B  #4,D0       ; set up read TRAP
+00001010  4E4F                      29      TRAP #15            ; read input
+00001012  3641                      30      MOVEA   D1,A3     ; move input to A3
+00001014  4E4F                      31      TRAP #15            ; read input
+00001016  3841                      32      MOVEA   D1,A4     ; move input to A4
+00001018  103C 0002                 33      MOVE.B #2,D0        ; set up ASCII read TRAP
+0000101C  4E4F                      34      TRAP #15            ; read input
+0000101E                            35      
+0000101E                            36  *   This function takes an ASCII number containing only 0 and 1 and
+0000101E                            37  *   converts it to a binary number.
+0000101E                            38  *
+0000101E                            39  *   Input: ASCII number is pointed to in memory by (A1)
+0000101E                            40  *           Length of this number is in D1
+0000101E                            41  *
+0000101E                            42  *   Output: Binary number stored in D3
+0000101E                            43  Convert_ASCII_to_BIN:
+0000101E  4240                      44      CLR D0
+00001020  4243                      45      CLR D3
+00001022                            46  Convert_Loop:
+00001022  1019                      47      MOVE.B (A1)+,D0     ; move first ASCII byte to D0
+00001024  C07C 00FF                 48      AND.W   #mask,D0    ; mask the byte
+00001028  0400 0030                 49      SUB.B   #$30,D0     ; subtract 30
+0000102C  5341                      50      SUB.W   #1, D1      ; decrement D1
+0000102E  4EB9 0000105E             51      JSR SHIFT_D0        ; shift D0 to proper place
+00001034  8640                      52      OR D0,D3            ; add bit in D0 to answer(D3)
+00001036  B27C 0000                 53      CMP #0, D1          ; check if D1 == 0
+0000103A  66E6                      54      BNE CONVERT_LOOP    ; loop if D1 != 0
+0000103C                            55  
+0000103C                            56      
+0000103C                            57  TESTING:
+0000103C  3C7C 1388                 58      MOVEA #5000,A6      ; point A6 to mem loc 5000
+00001040  3CBC 9999                 59      MOVE.W #%1001100110011001,(A6)   ; move binary test value to mem loc 5000
+00001044                            60      
+00001044                            61  LOOP:
+00001044  B653                      62      CMP.W (A3),D3       ; compare value in D3 to value pointed by A3
+00001046  6700 0010                 63      BEQ FOUND           ; values match
+0000104A  544B                      64      ADDQ.W  #word,A3    ; increment pointer
+0000104C  B8CB                      65      CMP A3,A4           ; check if still in loop
+0000104E  6FF4                      66      BLE LOOP            ; loop
+00001050                            67      
+00001050  3A7C FFFF                 68      MOVEA #$FFFFFFFF,A5 ; not found, fill A5
+00001054  4E72 2700                 69      STOP #exit
+00001058                            70      
+00001058                            71  FOUND:
+00001058  3A4B                      72      MOVEA A3,A5         ; move found address to A5
+0000105A  4E72 2700                 73      STOP #exit          ; end sim
+0000105E                            74      
+0000105E                            75  * This function shifts the value of D0 left X times, where X is stored in D1
+0000105E                            76  SHIFT_D0:
+0000105E  3C01                      77      MOVE D1, D6         ; store number of places to shift in d6
+00001060  BC7C 0000                 78      CMP #0, D6          ; check if D6 == 0
+00001064  6700 000C                 79      BEQ ENDSHIFTLOOP
+00001068                            80  SHIFTLOOP:
+00001068  E340                      81      ASL.W #1, D0        ; shift 1 bit
+0000106A  5346                      82      SUB #1, D6          ; decrement d6
+0000106C  BC7C 0000                 83      CMP #0, D6          ; check if D6 is 0
+00001070  6EF6                      84      BGT SHIFTLOOP       ; loop of D6 > 0
+00001072                            85  ENDSHIFTLOOP:
+00001072  4E75                      86      RTS
+00001074                            87      
+00001074                            88      
+00001074                            89      
+00001074                            90  
+00001074  FFFF FFFF                 91      SIMHALT             ; halt simulator
+00001078                            92  
+00001078                            93  * Put variables and constants here
+00001078                            94  
+00001078= 45 6E 74 65 72 20 ...     95  INTROMSG DC.B 'Enter starting address, ending address, and pattern',CR,LF,0 
+000010AE                            96  
+000010AE                            97      END    START        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+CONVERT_ASCII_TO_BIN  101E
+CONVERT_LOOP        1022
+CR                  D
+ENDSHIFTLOOP        1072
+EXIT                2700
+FOUND               1058
+INTROMSG            1078
+LF                  A
+LOOP                1044
+MASK                FF
+SHIFTLOOP           1068
+SHIFT_D0            105E
+START               1000
+TESTING             103C
+WORD                2
